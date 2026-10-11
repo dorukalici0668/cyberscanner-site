@@ -1,1 +1,81 @@
-<!DOCTYPE html><html><body><h1>CYBER SCANNER</h1></body></html>
+<!DOCTYPE html>
+<html lang="tr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CYBER SCANNER - Guvenli Indirme</title>
+<style>
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0d0716;font-family:'Segoe UI',Arial,sans-serif;color:#f3ebff;padding:20px;box-sizing:border-box}
+.card{background:#120c21;border:1px solid #291b47;border-radius:16px;padding:36px 32px;max-width:540px;width:100%;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.5)}
+.badge{display:inline-block;background:#17102b;border:1px solid #332154;color:#8c7aa6;font-size:11px;letter-spacing:1px;border-radius:99px;padding:5px 14px;margin-bottom:16px}
+.logo{font-size:44px;margin-bottom:6px}
+h1{margin:0 0 6px;font-size:24px;letter-spacing:1px}
+p{color:#9f91ba;font-size:13.5px;line-height:1.6}
+.keyrow{display:flex;gap:8px;margin:18px 0 10px}
+.keyrow input{flex:1;padding:13px 14px;background:#17102b;border:1px solid #332154;border-radius:10px;color:#f3ebff;font-size:14px;font-family:monospace;letter-spacing:1px;outline:none;box-sizing:border-box;min-width:0}
+.keyrow input:focus{border-color:#7c3aed}
+.keyrow button{padding:13px 22px;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;font-size:14px;font-weight:700;border:none;border-radius:10px;cursor:pointer;white-space:nowrap}
+.keyrow button:disabled{opacity:.6}
+.msg{display:none;font-size:13px;margin:10px 0;padding:10px;border-radius:8px;line-height:1.6}
+.msg.ok{display:block;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.4);color:#4ade80}
+.msg.err{display:block;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.4);color:#f87171}
+.msg.info{display:block;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.4);color:#fbbf24}
+ol{text-align:left;color:#c4b8db;font-size:13px;line-height:1.9;padding-left:20px;margin:14px 0 0}
+.note{font-size:11.5px;color:#71628c;margin-top:18px;border-top:1px solid #291b47;padding-top:14px}
+.hidden{display:none}
+</style></head>
+<body><div class="card">
+<div class="badge">SISTEM GUVENLIK TARAMASI</div>
+<div class="logo">&#128737;&#65039;</div>
+<h1>CYBER SCANNER</h1>
+<p>Yetkilinin size verdigi <b>keyi</b> girin. Key dogrulanirsa indirme otomatik baslar.</p>
+<div class="keyrow">
+<input type="text" id="keyinput" placeholder="KEY GIRIN (XXXX-XXXX-XXXX-XXXX)" autocomplete="off">
+<button id="btn" onclick="doCheck()">GONDER</button>
+</div>
+<div id="msg" class="msg"></div>
+<ol id="steps" class="hidden">
+<li>Indirilen <b>CheatScanner.exe</b>'yi calistirin</li>
+<li>Windows mavi SmartScreen uyarisi cikarsa: <b>Daha fazla bilgi</b> > <b>Yine de calistir</b></li>
+<li>Acilan ekrana <b>AYNI keyi</b> tekrar girin</li>
+<li>Tarama bitene kadar siyah konsol penceresini <b>kapatmayin</b></li>
+</ol>
+<p class="note">Bu sayfa GitHub uzerinde barindirilir ve her zaman aciktir. Program yalnizca hile yazilimi izleri tarar.</p>
+</div>
+<script>
+var TUNNEL=null, TOKEN=null;
+function msg(t,cls){var m=document.getElementById('msg');m.textContent=t;m.className='msg '+cls;}
+function loadLink(){
+  msg('Sunucu baglantisi aliniyor...','info');
+  fetch('link.json?ts='+Date.now()).then(function(r){
+    if(!r.ok) throw new Error('link.json yok');
+    return r.json();
+  }).then(function(c){
+    if(!c.tunnel){throw new Error('bos');}
+    TUNNEL=c.tunnel.replace(/\/+$/,'');TOKEN=c.token;
+    msg('Hazir! Keyinizi girin.','ok');
+  }).catch(function(e){
+    msg('Yetkilinin sunucusu su an acik degil. Yetkili programi baslattiktan sonra bu sayfayi yenileyin (F5).','err');
+  });
+}
+function doCheck(){
+  var k=document.getElementById('keyinput').value.trim();
+  var b=document.getElementById('btn');
+  if(!k){msg('Lutfen yetkilinin size verdigi keyi girin.','err');return;}
+  if(!TUNNEL){loadLink();return;}
+  b.disabled=true;msg('Key dogrulaniyor...','info');
+  fetch(TUNNEL+'/api/download-check?key='+encodeURIComponent(k)).then(function(r){return r.json().then(function(d){return {s:r.status,d:d};});}).then(function(o){
+    if(o.s===200&&o.d.ok){
+      msg('Key dogrulandi! Indirme basliyor...','ok');
+      document.getElementById('steps').classList.remove('hidden');
+      window.location.href=TUNNEL+'/d/'+TOKEN+'?key='+encodeURIComponent(k);
+    } else {
+      msg((o.d&&o.d.error)?o.d.error:'Key gecersiz!','err');
+    }
+    b.disabled=false;
+  }).catch(function(e){
+    msg('Yetkilinin sunucusuna ulasilamadi (su an kapali olabilir). Lutfen daha sonra tekrar deneyin.','err');
+    b.disabled=false;
+  });
+}
+document.getElementById('keyinput').addEventListener('keypress',function(e){if(e.key==='Enter')doCheck();});
+loadLink();
+</script>
+</body></html>
