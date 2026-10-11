@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="tr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CYBER SCANNER - Yetkili Paneli</title>
+<style>
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0d0716;font-family:'Segoe UI',Arial,sans-serif;color:#f3ebff;padding:20px;box-sizing:border-box}
+.card{background:#120c21;border:1px solid #291b47;border-radius:16px;padding:36px 32px;max-width:560px;width:100%;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.5)}
+.badge{display:inline-block;background:#17102b;border:1px solid #332154;color:#8c7aa6;font-size:11px;letter-spacing:1px;border-radius:99px;padding:5px 14px;margin-bottom:16px}
+.logo{font-size:40px;margin-bottom:6px}
+h1{margin:0 0 6px;font-size:22px;letter-spacing:1px}
+p{color:#9f91ba;font-size:13px;line-height:1.6}
+.pinrow{display:flex;gap:8px;margin:16px 0}
+.pinrow input{flex:1;padding:13px 14px;background:#17102b;border:1px solid #332154;border-radius:10px;color:#f3ebff;font-size:14px;outline:none;box-sizing:border-box;min-width:0}
+.pinrow button{padding:13px 22px;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;font-size:14px;font-weight:700;border:none;border-radius:10px;cursor:pointer}
+select{width:100%;padding:12px;background:#17102b;border:1px solid #332154;border-radius:10px;color:#f3ebff;font-size:13px;margin-bottom:12px;outline:none}
+.genbtn{width:100%;padding:14px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;font-size:15px;font-weight:700;border:none;border-radius:10px;cursor:pointer}
+.genbtn:disabled{opacity:.6;cursor:wait}
+.result{margin-top:16px;padding:16px;background:#17102b;border:1px solid #332154;border-radius:10px;display:none}
+.key{font-family:monospace;font-size:20px;font-weight:800;letter-spacing:2px;color:#4ade80;word-break:break-all;margin-bottom:6px}
+.meta{font-size:11.5px;color:#8c7aa6;margin-bottom:12px}
+.copy{padding:9px 18px;background:#241743;border:1px solid #332154;color:#cbbad9;font-size:12px;border-radius:8px;cursor:pointer}
+.err{display:none;color:#f87171;font-size:12.5px;margin-top:10px}
+.stats{margin-top:18px;padding-top:14px;border-top:1px solid #291b47;font-size:11.5px;color:#71628c}
+.hidden{display:none}
+</style></head>
+<body><div class="card">
+<div class="badge">YETKILI PANELI - KEY URETIM</div>
+<div class="logo">&#128273;</div>
+<h1>CYBER SCANNER</h1>
+
+<div id="loginbox">
+<p>Key uretmek icin PIN girin</p>
+<div class="pinrow">
+<input type="password" id="pininput" placeholder="PIN KODU" autocomplete="off">
+<button onclick="login()">GIRIS</button>
+</div>
+<div id="loginerr" class="err">Hatali PIN!</div>
+</div>
+
+<div id="panelbox" class="hidden">
+<p><b>Ayni key</b> hem indirme hem tarama aktivasyonu icin kullanilir (tek kullanimlik).</p>
+<select id="ktype">
+<option value="10M" selected>10 Dakika (Tek Kullanimlik)</option>
+<option value="1H">1 Saat</option>
+<option value="1D">1 Gun</option>
+<option value="7D">7 Gun</option>
+<option value="30D">30 Gun</option>
+<option value="LIFE">Omur Boyu</option>
+</select>
+<button class="genbtn" id="genbtn" onclick="gen()">&#10024; KOD OLUSTUR</button>
+<div class="result" id="result">
+<div class="key" id="keytext">----</div>
+<div class="meta" id="keymeta"></div>
+<button class="copy" onclick="copyKey()">&#128203; Keyi Kopyala</button>
+</div>
+<div id="generr" class="err"></div>
+<div class="stats" id="stats">Istatistikler yukleniyor...</div>
+</div>
+
+</div>
+<script>
+var TUNNEL=null, AUTHTOKEN=null;
+function loadLink(){
+  fetch('link.json?ts='+Date.now()).then(function(r){return r.json();}).then(function(c){
+    TUNNEL=c.tunnel.replace(/\/+$/,'');
+  }).catch(function(e){});
+}
+function login(){
+  var p=document.getElementById('pininput').value.trim();
+  if(!TUNNEL){loadLink();}
+  if(!TUNNEL){document.getElementById('loginerr').textContent='Sunucu bilgisi yok - yetkili programi baslatmali';document.getElementById('loginerr').style.display='block';return;}
+  fetch(TUNNEL+'/api/auth/login?pin='+encodeURIComponent(p)).then(function(r){
+    return r.json().then(function(d){return {s:r.status,d:d};});
+  }).then(function(o){
+    if(o.s===200&&o.d.ok){
+      AUTHTOKEN=o.d.token||'';
+      document.getElementById('loginbox').classList.add('hidden');
+      document.getElementById('panelbox').classList.remove('hidden');
+      loadStats();
+    } else {
+      document.getElementById('loginerr').style.display='block';
+    }
+  }).catch(function(e){
+    document.getElementById('loginerr').textContent='Sunucuya ulasilamadi (kapali olabilir)';
+    document.getElementById('loginerr').style.display='block';
+  });
+}
+document.getElementById('pininput').addEventListener('keypress',function(e){if(e.key==='Enter')login();});
+function gen(){
+  var b=document.getElementById('genbtn');b.disabled=true;b.textContent='OLUSTURULUYOR...';
+  document.getElementById('generr').style.display='none';
+  fetch(TUNNEL+'/api/keys/generate?type='+encodeURIComponent(document.getElementById('ktype').value)+'&auth='+encodeURIComponent(AUTHTOKEN))
+    .then(function(r){return r.json().then(function(d){return {s:r.status,d:d};});})
+    .then(function(o){
+      b.disabled=false;b.innerHTML='&#10024; KOD OLUSTUR';
+      if(o.s===200&&o.d.ok){
+        document.getElementById('keytext').textContent=o.d.key;
+        var names={'10M':'10 Dakika (tek kullanimlik)','1H':'1 Saat','1D':'1 Gun','7D':'7 Gun','30D':'30 Gun','LIFE':'Omur Boyu'};
+        document.getElementById('keymeta').textContent='Sure: '+(names[o.d.type]||o.d.type)+' | Bitis: '+o.d.expires;
+        document.getElementById('result').style.display='block';
+        copyText(o.d.key);
+        loadStats();
+      } else {
+        var ge=document.getElementById('generr');ge.textContent=(o.d&&o.d.error)?o.d.error:'Key olusturulamadi!';ge.style.display='block';
+      }
+    })
+    .catch(function(e){b.disabled=false;b.innerHTML='&#10024; KOD OLUSTUR';var ge=document.getElementById('generr');ge.textContent='Sunucuya ulasilamadi (kapali olabilir)';ge.style.display='block';});
+}
+function copyKey(){copyText(document.getElementById('keytext').textContent);}
+function copyText(t){
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t);}
+  else{var ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');}catch(e){}document.body.removeChild(ta);}
+}
+function loadStats(){
+  fetch(TUNNEL+'/api/server-stats?auth='+encodeURIComponent(AUTHTOKEN)).then(function(r){return r.json();}).then(function(d){
+    document.getElementById('stats').innerHTML='Toplam indirme: <b>'+d.downloads+'</b>'+(d.lastIp?'<br>Son indirme: '+d.lastIp:'');
+  }).catch(function(e){});
+}
+loadLink();
+</script>
+</body></html>
