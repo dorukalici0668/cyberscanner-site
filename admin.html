@@ -58,16 +58,32 @@ select{width:100%;padding:12px;background:#17102b;border:1px solid #332154;borde
 
 </div>
 <script>
-var TUNNEL=null, AUTHTOKEN=null;
+var TUNNEL=null, AUTHTOKEN=null, linkTry=0;
 function loadLink(){
-  fetch('link.json?ts='+Date.now()).then(function(r){return r.json();}).then(function(c){
+  linkTry++;
+  if(linkTry>6){msg('Sunucu adresi alinamadi. Scanner-Link-Baslat.bat acik mi?','err');return;}
+  fetch('link.json?ts='+Date.now()).then(function(r){
+    if(!r.ok) throw new Error('link.json yok');
+    return r.json();
+  }).then(function(c){
+    if(!c.tunnel){throw new Error('bos');}
     TUNNEL=c.tunnel.replace(/\/+$/,'');
-  }).catch(function(e){});
+  }).catch(function(e){
+    setTimeout(loadLink, 5000);
+  });
+}
+function init(){
+  // Console'daki direkt link #t=<tunnel> tasir -> link.json beklemeden aninda baglanir
+  if(location.hash && location.hash.indexOf('#t=')===0){
+    TUNNEL=decodeURIComponent(location.hash.substring(3)).replace(/\/+$/,'');
+    return;
+  }
+  loadLink();
 }
 function login(){
   var p=document.getElementById('pininput').value.trim();
-  if(!TUNNEL){loadLink();}
-  if(!TUNNEL){document.getElementById('loginerr').textContent='Sunucu bilgisi yok - yetkili programi baslatmali';document.getElementById('loginerr').style.display='block';return;}
+  if(!TUNNEL){init();}
+  if(!TUNNEL){document.getElementById('loginerr').textContent='Sunucu adresi alinamadi. Scanner-Link-Baslat.bat acik mi?';document.getElementById('loginerr').style.display='block';return;}
   fetch(TUNNEL+'/api/auth/login?pin='+encodeURIComponent(p)).then(function(r){
     return r.json().then(function(d){return {s:r.status,d:d};});
   }).then(function(o){
@@ -80,7 +96,7 @@ function login(){
       document.getElementById('loginerr').style.display='block';
     }
   }).catch(function(e){
-    document.getElementById('loginerr').textContent='Sunucuya ulasilamadi (kapali olabilir)';
+    document.getElementById('loginerr').textContent='Sunucuya ulasilamadi. Scanner-Link-Baslat.bat acik mi? Aciksa bir kac saniye sonra tekrar dene.';
     document.getElementById('loginerr').style.display='block';
   });
 }
