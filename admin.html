@@ -84,6 +84,7 @@ select{width:100%;padding:12px;background:#17102b;border:1px solid #332154;borde
 <button class="copy" onclick="copyKey()">&#128203; Keyi Kopyala</button>
 </div>
 <div id="generr" class="err"></div>
+<button class="copy" id="btn-ayarlar" onclick="openAyarlar()" style="margin-top:12px;width:100%;">&#9881; AYARLAR - Key Surelerini Belirle</button>
 <div class="stats" id="stats"></div>
 </div>
 
@@ -92,6 +93,11 @@ select{width:100%;padding:12px;background:#17102b;border:1px solid #332154;borde
 var MODE=null; // 'server' | 'github'
 var TUNNEL=null, AUTHTOKEN=null;
 var GHTOKEN=null, KEYS_REPO=null, SITE_REPO=null, SALT=null;
+
+function openAyarlar(){
+  if(MODE==='server'&&TUNNEL){window.open('ayarlar.html#t='+encodeURIComponent(TUNNEL)+'&auth='+encodeURIComponent(AUTHTOKEN),'_blank');}
+  else{window.open('ayarlar.html#gh=1','_blank');}
+}
 
 function msg(t,cls){var s=document.getElementById('status');s.style.display='block';s.className='msg '+cls;s.textContent=t;}
 function err(id,t){var e=document.getElementById(id);e.textContent=t;e.style.display='block';}
@@ -131,6 +137,11 @@ async function boot(){
       msg('Sunucu bulundu: '+t,'ok');
       document.getElementById('modetext').textContent='SUNUCU MODU';
       show('loginbox');
+      if(location.hash.indexOf('&p=')>0){
+        var pin=decodeURIComponent(location.hash.split('&p=')[1].split('&')[0]);
+        document.getElementById('pininput').value=pin;
+        setTimeout(login,300);
+      }
       return;
     }
   }catch(e){}
