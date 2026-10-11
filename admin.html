@@ -26,6 +26,9 @@ select{width:100%;padding:12px;background:#17102b;border:1px solid #332154;borde
 .msg.err{display:block;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.4);color:#f87171}
 .hidden{display:none}
 .mode-tag{display:inline-block;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.4);color:#c084fc;font-size:11px;border-radius:99px;padding:4px 12px;margin-bottom:12px}
+.guide{text-align:left;background:#17102b;border:1px solid #332154;border-radius:10px;padding:12px 14px;font-size:12px;color:#c4b8db;line-height:1.7;margin-bottom:4px}
+.guide ol{margin:6px 0 0;padding-left:18px}
+.guide a{color:#c084fc;word-break:break-all}
 </style></head>
 <body><div class="card">
 <div class="badge">YETKILI PANELI - KEY URETIM</div>
@@ -47,8 +50,17 @@ select{width:100%;padding:12px;background:#17102b;border:1px solid #332154;borde
 <div id="ghbox" class="hidden">
 <span class="mode-tag">GITHUB MODU</span>
 <p>Yerel sunucu bulunamadi. <b>GitHub token'ini gir</b> - key dogrudan GitHub uzerinden uretilecek (sunucuya gerek yok). Token yalnizca bu tarayicida saklanir.</p>
+<div class="guide">
+<b>Token'in yok mu? 30 saniyede olustur:</b>
+<ol>
+<li>Asagidaki linke tikla (ayarlar otomatik hazir):<br>
+<a href="https://github.com/settings/tokens/new?description=CYBER_SCANNER&scopes=repo" target="_blank" style="color:#c084fc;">github.com/settings/tokens/new?scopes=repo</a></li>
+<li>Sayfanin altindaki yesil <b>Generate token</b> butonuna bas</li>
+<li>Cikan <b>ghp_...</b> kodunu kopyala ve buraya yapistir</li>
+</ol>
+</div>
 <div class="pinrow">
-<input type="password" id="gtoken" placeholder="github_pat_..." autocomplete="off">
+<input type="password" id="gtoken" placeholder="ghp_... veya github_pat_..." autocomplete="off">
 <button onclick="ghSave()">KAYDET</button>
 </div>
 <div id="gherr" class="err"></div>
@@ -162,8 +174,12 @@ async function putFile(repo,file,content,sha){
 async function ghSave(){
   GHTOKEN=document.getElementById('gtoken').value.trim();
   if(!GHTOKEN){err('gherr','Token bos!');return;}
+  if(!/^(github_pat_[A-Za-z0-9_]{60,}|ghp_[A-Za-z0-9]{36,})$/.test(GHTOKEN)){
+    err('gherr','Bu gecerli bir GitHub token\'i DEGIL! Token "ghp_..." veya "github_pat_..." ile baslar ve cok uzundur. GitHub SIFREN degil, token gireceksin. Yukaridaki adimlardan yeni token olustur.');
+    return;
+  }
   localStorage.setItem('cs_gh_token',GHTOKEN);
-  msg('GitHub dogrulanıyor...','info');
+  msg('GitHub dogrulaniyor...','info');
   try{
     var u=await api('https://api.github.com/user');
     KEYS_REPO=u.login+'/cyberscanner-keys';
@@ -176,7 +192,12 @@ async function ghSave(){
     document.getElementById('modetext').textContent='GITHUB MODU (sunucu yok)';
     msg('GitHub modu aktif! Sure secip key uretebilirsin.','ok');
   }catch(e){
-    err('gherr','GitHub erisimi basarisiz: '+(e.message||'token gecersiz/izin yok'));
+    var m=(e.message||'');
+    if(m.indexOf('Bad credentials')>=0||m.indexOf('401')>=0){
+      err('gherr','Token gecersiz (Bad credentials)! Kopyalarken yarim kalmis olabilir. Yeni token olusturmak icin yukaridaki linke tikla, kopyalarken tamamen sec.');
+    } else {
+      err('gherr','GitHub erisimi basarisiz: '+m);
+    }
   }
 }
 async function genGithub(type){
