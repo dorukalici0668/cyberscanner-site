@@ -41,23 +41,44 @@ ol{text-align:left;color:#c4b8db;font-size:13px;line-height:1.9;padding-left:20p
 </div>
 <script>
 var KEYSURL='keys-public.json';
-var DLURL='https://github.com/dorukalici0668/cyberscanner-site/releases/download/latest/CheatScanner_268288.exe';
+var APIURL='https://api.github.com/repos/dorukalici0668/cyberscanner-site/contents/keys-public.json';
+var DLURL='https://github.com/dorukalici0668/cyberscanner-site/releases/download/latest/CheatScanner_270848.exe';
 function msg(t,cls){var m=document.getElementById('msg');m.textContent=t;m.className='msg '+cls;}
+function fetchKeys(){
+  // 1) GitHub API - her zaman en guncel commit (build bekleme YOK, saniyeler icinde gecerli)
+  return fetch(APIURL+'?ts='+Date.now()).then(function(r){
+    if(!r.ok)throw new Error('api yok');
+    return r.json();
+  }).then(function(meta){
+    var b64=(meta.content||'').replace(/\s/g,'');
+    var bin=atob(b64);
+    var bytes=Uint8Array.from(bin,function(c){return c.charCodeAt(0);});
+    return JSON.parse(new TextDecoder().decode(bytes));
+  }).catch(function(){
+    // 2) Yedek: Pages dosyasi (build gecikmesi olabilir)
+    return fetch(KEYSURL+'?ts='+Date.now()).then(function(r){
+      if(!r.ok)throw new Error('liste yok');
+      return r.json();
+    });
+  });
+}
 function doCheck(){
-  var k=document.getElementById('keyinput').value.trim().toUpperCase();
+  var k=document.getElementById('keyinput').value.trim().toUpperCase().replace(/\s+/g,'');
   var b=document.getElementById('btn');
   if(!k){msg('Lutfen yetkilinin size verdigi keyi girin.','err');return;}
   b.disabled=true;msg('Key dogrulaniyor...','info');
-  fetch(KEYSURL+'?ts='+Date.now()).then(function(r){
-    if(!r.ok)throw new Error('liste yok');
-    return r.json();
-  }).then(function(list){
+  fetchKeys().then(function(list){
+    if(!list || list.length===0){
+      msg('Key listesi henuz hazir degil. 1-2 dakika sonra tekrar deneyin.','info');
+      b.disabled=false;return;
+    }
     var found=null;
     for(var i=0;i<list.length;i++){
-      if(list[i].key && list[i].key.toUpperCase()===k){found=list[i];break;}
+      var lk=(list[i].key||'').toUpperCase().replace(/\s+/g,'');
+      if(lk===k){found=list[i];break;}
     }
     if(!found){
-      msg('Bu key listede YOK! Yetkilinin verdigi keyi harf harf kontrol edin.','err');
+      msg('Bu key listede YOK! Yetkilinin verdigi keyi harf harf kontrol edin. (Yeni uretilen keyler saniyeler icinde gecerli olur)','err');
       b.disabled=false;return;
     }
     if(found.type!=='LIFE' && found.expiresEpoch && (found.expiresEpoch*1000)<Date.now()){
