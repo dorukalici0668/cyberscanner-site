@@ -49,9 +49,18 @@ function loadLink(){
   }).then(function(c){
     if(!c.tunnel){throw new Error('bos');}
     TUNNEL=c.tunnel.replace(/\/+$/,'');TOKEN=c.token;
-    msg('Hazir! Keyinizi girin.','ok');
+    checkServer();
   }).catch(function(e){
     msg('Yetkilinin sunucusu su an acik degil. Yetkili programi baslattiktan sonra bu sayfayi yenileyin (F5).','err');
+  });
+}
+function checkServer(){
+  msg('Sunucu durumu kontrol ediliyor...','info');
+  fetch(TUNNEL+'/api/ping?ts='+Date.now()).then(function(r){
+    if(!r.ok) throw new Error('ping basarisiz');
+    msg('SUNUCU CEVRIMICI - keyinizi girip indirebilirsiniz.','ok');
+  }).catch(function(e){
+    msg('Sayfa hazir ancak sunucu KAPALI gorunuyor. Yetkili programi baslattiktan sonra tekrar deneyin (F5).','err');
   });
 }
 function init(){
