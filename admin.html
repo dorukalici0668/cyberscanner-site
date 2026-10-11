@@ -273,7 +273,7 @@ async function gen(){
 
 // ---- SUNUCU MODU ----
 async function login(){
-  var p=document.getElementById('pininput').value.trim();
+  var p=document.getElementById('pininput').value.replace(/\s+/g,'').trim();
   if(!TUNNEL){await boot();}
   try{
     var r=await fetch(TUNNEL+'/api/auth/login?pin='+encodeURIComponent(p));
