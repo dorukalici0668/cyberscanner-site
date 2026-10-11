@@ -7,5 +7,7 @@
   {"key": "4KB6-Y34R-T8SZ-U7JD", "type": "10M", "expiresEpoch": 1791748746, "expiresText": "11.10.2026 22:59", "created": "2026-10-11T22:49:06.8507043+03:00"},
   {"key": "B95P-PX7T-UGAJ-LAYP", "type": "10M", "expiresEpoch": 1791749625, "expiresText": "11.10.2026 23:13:45", "created": "2026-10-11T20:03:45.480Z"},
   {"key": "XRAT-89P8-EGQL-GGUR", "type": "10M", "expiresEpoch": 1791750346, "expiresText": "11.10.2026 23:25:46", "created": "2026-10-11T20:15:46.854Z"},
-  {"key": "TF4Q-E47K-MN7E-Q4KZ", "type": "PANEL", "expiresEpoch": 1794343836, "expiresText": "10.11.2026 23:50", "created": "2026-10-11T23:50:37.0008319+03:00", "panel": true, "ip": "127.0.0.1"}
+  {"key": "TF4Q-E47K-MN7E-Q4KZ", "type": "PANEL", "expiresEpoch": 1794343836, "expiresText": "10.11.2026 23:50", "created": "2026-10-11T23:50:37.0008319+03:00", "panel": true, "ip": "127.0.0.1"},
+  {"key": "HAFW-DYMC-UART-C4F3", "type": "PANEL", "expiresEpoch": 1794343968, "expiresText": "10.11.2026 23:52", "created": "2026-10-11T23:52:48.9343956+03:00", "panel": true, "ip": "1.1.1.1"},
+  {"key": "8ZBS-QAS7-HWNJ-TVXY", "type": "PANEL", "expiresEpoch": 1794343968, "expiresText": "10.11.2026 23:52", "created": "2026-10-11T23:52:48.9792198+03:00", "panel": true, "ip": "1.1.1.1"}
 ]
