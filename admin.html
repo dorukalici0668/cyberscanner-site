@@ -18,25 +18,44 @@ select{width:100%;padding:12px;background:#17102b;border:1px solid #332154;borde
 .key{font-family:monospace;font-size:20px;font-weight:800;letter-spacing:2px;color:#4ade80;word-break:break-all;margin-bottom:6px}
 .meta{font-size:11.5px;color:#8c7aa6;margin-bottom:12px}
 .copy{padding:9px 18px;background:#241743;border:1px solid #332154;color:#cbbad9;font-size:12px;border-radius:8px;cursor:pointer}
-.err{display:none;color:#f87171;font-size:12.5px;margin-top:10px}
+.err{display:none;color:#f87171;font-size:12.5px;margin-top:10px;line-height:1.6}
 .stats{margin-top:18px;padding-top:14px;border-top:1px solid #291b47;font-size:11.5px;color:#71628c}
+.msg{display:none;font-size:13px;margin:10px 0;padding:10px;border-radius:8px;line-height:1.6}
+.msg.ok{display:block;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.4);color:#4ade80}
+.msg.info{display:block;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.4);color:#fbbf24}
+.msg.err{display:block;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.4);color:#f87171}
 .hidden{display:none}
+.mode-tag{display:inline-block;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.4);color:#c084fc;font-size:11px;border-radius:99px;padding:4px 12px;margin-bottom:12px}
 </style></head>
 <body><div class="card">
 <div class="badge">YETKILI PANELI - KEY URETIM</div>
 <div class="logo">&#128273;</div>
 <h1>CYBER SCANNER</h1>
 
-<div id="loginbox">
+<div id="status" class="msg info">Sunucu araniyor (yerel + tunnel)...</div>
+
+<div id="loginbox" class="hidden">
+<span class="mode-tag">SUNUCU MODU</span>
 <p>Key uretmek icin PIN girin</p>
 <div class="pinrow">
 <input type="password" id="pininput" placeholder="PIN KODU" autocomplete="off">
 <button onclick="login()">GIRIS</button>
 </div>
-<div id="loginerr" class="err">Hatali PIN!</div>
+<div id="loginerr" class="err"></div>
+</div>
+
+<div id="ghbox" class="hidden">
+<span class="mode-tag">GITHUB MODU</span>
+<p>Yerel sunucu bulunamadi. <b>GitHub token'ini gir</b> - key dogrudan GitHub uzerinden uretilecek (sunucuya gerek yok). Token yalnizca bu tarayicida saklanir.</p>
+<div class="pinrow">
+<input type="password" id="gtoken" placeholder="github_pat_..." autocomplete="off">
+<button onclick="ghSave()">KAYDET</button>
+</div>
+<div id="gherr" class="err"></div>
 </div>
 
 <div id="panelbox" class="hidden">
+<span class="mode-tag" id="modetext"></span>
 <p><b>Ayni key</b> hem indirme hem tarama aktivasyonu icin kullanilir (tek kullanimlik).</p>
 <select id="ktype">
 <option value="10M" selected>10 Dakika (Tek Kullanimlik)</option>
@@ -53,84 +72,206 @@ select{width:100%;padding:12px;background:#17102b;border:1px solid #332154;borde
 <button class="copy" onclick="copyKey()">&#128203; Keyi Kopyala</button>
 </div>
 <div id="generr" class="err"></div>
-<div class="stats" id="stats">Istatistikler yukleniyor...</div>
+<div class="stats" id="stats"></div>
 </div>
 
 </div>
 <script>
-var TUNNEL=null, AUTHTOKEN=null, linkTry=0;
-function loadLink(){
-  linkTry++;
-  if(linkTry>6){msg('Sunucu adresi alinamadi. Scanner-Link-Baslat.bat acik mi?','err');return;}
-  fetch('link.json?ts='+Date.now()).then(function(r){
-    if(!r.ok) throw new Error('link.json yok');
-    return r.json();
-  }).then(function(c){
-    if(!c.tunnel){throw new Error('bos');}
-    TUNNEL=c.tunnel.replace(/\/+$/,'');
-  }).catch(function(e){
-    setTimeout(loadLink, 5000);
-  });
-}
-function init(){
-  // Console'daki direkt link #t=<tunnel> tasir -> link.json beklemeden aninda baglanir
+var MODE=null; // 'server' | 'github'
+var TUNNEL=null, AUTHTOKEN=null;
+var GHTOKEN=null, KEYS_REPO=null, SITE_REPO=null, SALT=null;
+
+function msg(t,cls){var s=document.getElementById('status');s.style.display='block';s.className='msg '+cls;s.textContent=t;}
+function err(id,t){var e=document.getElementById(id);e.textContent=t;e.style.display='block';}
+function show(id){document.getElementById(id).classList.remove('hidden');}
+function hide(id){document.getElementById(id).classList.add('hidden');}
+
+// ---- SUNUCU KESEFI: hash -> link.json -> localhost portlari ----
+async function discover(){
+  var cands=[];
   if(location.hash && location.hash.indexOf('#t=')===0){
-    TUNNEL=decodeURIComponent(location.hash.substring(3)).replace(/\/+$/,'');
-    return;
+    cands.push(decodeURIComponent(location.hash.substring(3)).replace(/\/+$/,''));
   }
-  loadLink();
+  try{
+    var r=await fetch('link.json?ts='+Date.now());
+    var c=await r.json();
+    if(c.tunnel)cands.push(c.tunnel.replace(/\/+$/,''));
+  }catch(e){}
+  cands.push('http://localhost:18999','http://localhost:19000','http://localhost:18492','http://localhost:18493');
+  for(var i=0;i<cands.length;i++){
+    try{
+      var r2=await fetch(cands[i]+'/api/ping?ts='+Date.now());
+      if(r2.ok){
+        var j=await r2.json();
+        if(j.ok)return cands[i];
+      }
+    }catch(e){}
+  }
+  return null;
 }
-function login(){
-  var p=document.getElementById('pininput').value.trim();
-  if(!TUNNEL){init();}
-  if(!TUNNEL){document.getElementById('loginerr').textContent='Sunucu adresi alinamadi. Scanner-Link-Baslat.bat acik mi?';document.getElementById('loginerr').style.display='block';return;}
-  fetch(TUNNEL+'/api/auth/login?pin='+encodeURIComponent(p)).then(function(r){
-    return r.json().then(function(d){return {s:r.status,d:d};});
-  }).then(function(o){
-    if(o.s===200&&o.d.ok){
-      AUTHTOKEN=o.d.token||'';
-      document.getElementById('loginbox').classList.add('hidden');
-      document.getElementById('panelbox').classList.remove('hidden');
+
+async function boot(){
+  try{
+    status('Sunucu araniyor (yerel + tunnel)...');
+    var t=await discover();
+    if(t){
+      MODE='server';TUNNEL=t;
+      msg('Sunucu bulundu: '+t,'ok');
+      document.getElementById('modetext').textContent='SUNUCU MODU';
+      show('loginbox');
+      return;
+    }
+  }catch(e){}
+  // Sunucu yok -> GITHUB MODU
+  MODE='github';
+  msg('Yerel sunucu bulunamadi - GITHUB MODU hazir (sunucu olmadan key uretebilirsin).','info');
+  document.getElementById('modetext').textContent='GITHUB MODU';
+  show('ghbox');
+  var saved=localStorage.getItem('cs_gh_token');
+  if(saved){
+    document.getElementById('gtoken').value=saved;
+    ghSave();
+  }
+}
+
+// ---- GITHUB MODU ----
+async function api(url,method,body){
+  var opt={method:method||'GET',headers:{'Authorization':'Bearer '+GHTOKEN,'Accept':'application/vnd.github+json','User-Agent':'cyberscanner'}};
+  if(body){opt.body=JSON.stringify(body);opt.headers['Content-Type']='application/json';}
+  var r=await fetch(url,opt);
+  var j=await r.json();
+  if(!r.ok)throw new Error((j&&j.message)?j.message:('HTTP '+r.status));
+  return j;
+}
+function b64utf8(b64){
+  var bin=atob(b64.replace(/\s/g,''));
+  var bytes=Uint8Array.from(bin,function(c){return c.charCodeAt(0);});
+  return new TextDecoder().decode(bytes);
+}
+function utf8b64(str){
+  var bytes=new TextEncoder().encode(str);
+  var bin='';
+  for(var i=0;i<bytes.length;i++)bin+=String.fromCharCode(bytes[i]);
+  return btoa(bin);
+}
+async function putFile(repo,file,content,sha){
+  var body={message:'cyberscanner update',content:utf8b64(content)};
+  if(sha)body.sha=sha;
+  await api('https://api.github.com/repos/'+repo+'/contents/'+file,'PUT',body);
+}
+async function ghSave(){
+  GHTOKEN=document.getElementById('gtoken').value.trim();
+  if(!GHTOKEN){err('gherr','Token bos!');return;}
+  localStorage.setItem('cs_gh_token',GHTOKEN);
+  msg('GitHub dogrulanıyor...','info');
+  try{
+    var u=await api('https://api.github.com/user');
+    KEYS_REPO=u.login+'/cyberscanner-keys';
+    SITE_REPO=u.login+'/cyberscanner-site';
+    var sm=await api('https://api.github.com/repos/'+KEYS_REPO+'/contents/salt.txt');
+    SALT=b64utf8(sm.content).trim();
+    MODE='github';
+    hide('ghbox');hide('loginbox');
+    show('panelbox');
+    document.getElementById('modetext').textContent='GITHUB MODU (sunucu yok)';
+    msg('GitHub modu aktif! Sure secip key uretebilirsin.','ok');
+  }catch(e){
+    err('gherr','GitHub erisimi basarisiz: '+(e.message||'token gecersiz/izin yok'));
+  }
+}
+async function genGithub(type){
+  var meta=await api('https://api.github.com/repos/'+KEYS_REPO+'/contents/keys.json');
+  var list=JSON.parse(b64utf8(meta.content));
+  var chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  var rnd=new Uint8Array(8);
+  crypto.getRandomValues(rnd);
+  var p1='',p2='';
+  for(var i=0;i<4;i++)p1+=chars[rnd[i]%32];
+  for(var i=4;i<8;i++)p2+=chars[rnd[i]%32];
+  var now=Math.floor(Date.now()/1000);
+  var secs={'10M':600,'1H':3600,'1D':86400,'7D':604800,'30D':2592000}[type]||600;
+  var epoch=type==='LIFE'?0:(now+secs);
+  var sigInput=p1+'-'+p2+'-'+type+'-'+epoch+'-'+SALT;
+  var hk=await crypto.subtle.importKey('raw',new TextEncoder().encode(SALT),{name:'HMAC',hash:'SHA-256'},false,['sign']);
+  var sig=new Uint8Array(await crypto.subtle.sign('HMAC',hk,new TextEncoder().encode(sigInput)));
+  var p3='',p4='';
+  for(var i=0;i<4;i++)p3+=chars[sig[i]%32];
+  for(var i=4;i<8;i++)p4+=chars[sig[i]%32];
+  var key=p1+'-'+p2+'-'+p3+'-'+p4;
+  var expiresText=type==='LIFE'?'Sinirsiz':new Date(epoch*1000).toLocaleString('tr-TR');
+  list.push({key:key,type:type,expiresEpoch:epoch,expiresText:expiresText,created:new Date().toISOString()});
+  var json=JSON.stringify(list,null,2);
+  await putFile(KEYS_REPO,'keys.json',json,meta.sha);
+  try{
+    var pm=await api('https://api.github.com/repos/'+SITE_REPO+'/contents/keys-public.json');
+    await putFile(SITE_REPO,'keys-public.json',json,pm.sha);
+  }catch(e){
+    await putFile(SITE_REPO,'keys-public.json',json,null);
+  }
+  return {key:key,type:type,expires:expiresText};
+}
+
+// ---- KEY URETIM DISPATCH ----
+async function gen(){
+  var type=document.getElementById('ktype').value;
+  var b=document.getElementById('genbtn');
+  b.disabled=true;var oldHtml=b.innerHTML;
+  b.innerHTML='<span>OLUSTURULUYOR...</span>';
+  hide('generr');
+  try{
+    var d;
+    if(MODE==='server'){
+      var r=await fetch(TUNNEL+'/api/keys/generate?type='+encodeURIComponent(type)+'&auth='+encodeURIComponent(AUTHTOKEN));
+      d=await r.json();
+      if(!(r.status===200&&d.ok))throw new Error(d.error||'Key olusturulamadi');
       loadStats();
     } else {
-      document.getElementById('loginerr').style.display='block';
+      d=await genGithub(type);
     }
-  }).catch(function(e){
-    document.getElementById('loginerr').textContent='Sunucuya ulasilamadi. Scanner-Link-Baslat.bat acik mi? Aciksa bir kac saniye sonra tekrar dene.';
-    document.getElementById('loginerr').style.display='block';
-  });
+    document.getElementById('keytext').textContent=d.key;
+    var names={'10M':'10 Dakika (tek kullanimlik)','1H':'1 Saat','1D':'1 Gun','7D':'7 Gun','30D':'30 Gun','LIFE':'Omur Boyu'};
+    document.getElementById('keymeta').textContent='Sure: '+(names[d.type]||d.type)+' | Bitis: '+d.expires;
+    show('result');
+    copyText(d.key);
+  }catch(e){
+    err('generr',(e.message||'Key olusturulamadi')+(MODE==='server'?' - Sunucu acik mi?':''));
+  }
+  b.disabled=false;b.innerHTML=oldHtml;
+}
+
+// ---- SUNUCU MODU ----
+async function login(){
+  var p=document.getElementById('pininput').value.trim();
+  if(!TUNNEL){await boot();}
+  try{
+    var r=await fetch(TUNNEL+'/api/auth/login?pin='+encodeURIComponent(p));
+    var d=await r.json();
+    if(r.status===200&&d.ok){
+      AUTHTOKEN=d.token||'';
+      hide('loginbox');
+      show('panelbox');
+      document.getElementById('modetext').textContent='SUNUCU MODU';
+      loadStats();
+    } else {
+      err('loginerr','Hatali PIN!');
+    }
+  }catch(e){
+    err('loginerr','Sunucuya ulasilamadi. Scanner-Link-Baslat.bat acik mi?');
+  }
 }
 document.getElementById('pininput').addEventListener('keypress',function(e){if(e.key==='Enter')login();});
-function gen(){
-  var b=document.getElementById('genbtn');b.disabled=true;b.textContent='OLUSTURULUYOR...';
-  document.getElementById('generr').style.display='none';
-  fetch(TUNNEL+'/api/keys/generate?type='+encodeURIComponent(document.getElementById('ktype').value)+'&auth='+encodeURIComponent(AUTHTOKEN))
-    .then(function(r){return r.json().then(function(d){return {s:r.status,d:d};});})
-    .then(function(o){
-      b.disabled=false;b.innerHTML='&#10024; KOD OLUSTUR';
-      if(o.s===200&&o.d.ok){
-        document.getElementById('keytext').textContent=o.d.key;
-        var names={'10M':'10 Dakika (tek kullanimlik)','1H':'1 Saat','1D':'1 Gun','7D':'7 Gun','30D':'30 Gun','LIFE':'Omur Boyu'};
-        document.getElementById('keymeta').textContent='Sure: '+(names[o.d.type]||o.d.type)+' | Bitis: '+o.d.expires;
-        document.getElementById('result').style.display='block';
-        copyText(o.d.key);
-        loadStats();
-      } else {
-        var ge=document.getElementById('generr');ge.textContent=(o.d&&o.d.error)?o.d.error:'Key olusturulamadi!';ge.style.display='block';
-      }
-    })
-    .catch(function(e){b.disabled=false;b.innerHTML='&#10024; KOD OLUSTUR';var ge=document.getElementById('generr');ge.textContent='Sunucuya ulasilamadi (kapali olabilir)';ge.style.display='block';});
-}
+document.getElementById('gtoken').addEventListener('keypress',function(e){if(e.key==='Enter')ghSave();});
 function copyKey(){copyText(document.getElementById('keytext').textContent);}
 function copyText(t){
   if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t);}
   else{var ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');}catch(e){}document.body.removeChild(ta);}
 }
 function loadStats(){
+  if(MODE!=='server')return;
   fetch(TUNNEL+'/api/server-stats?auth='+encodeURIComponent(AUTHTOKEN)).then(function(r){return r.json();}).then(function(d){
     document.getElementById('stats').innerHTML='Toplam indirme: <b>'+d.downloads+'</b>'+(d.lastIp?'<br>Son indirme: '+d.lastIp:'');
   }).catch(function(e){});
 }
-loadLink();
+boot();
 </script>
 </body></html>
