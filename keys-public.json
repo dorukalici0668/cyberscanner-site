@@ -8,8 +8,8 @@
   {"key": "B95P-PX7T-UGAJ-LAYP", "type": "10M", "expiresEpoch": 1791749625, "expiresText": "11.10.2026 23:13:45", "created": "2026-10-11T20:03:45.480Z"},
   {"key": "XRAT-89P8-EGQL-GGUR", "type": "10M", "expiresEpoch": 1791750346, "expiresText": "11.10.2026 23:25:46", "created": "2026-10-11T20:15:46.854Z"},
   {"key": "TF4Q-E47K-MN7E-Q4KZ", "type": "PANEL", "expiresEpoch": 1794343836, "expiresText": "10.11.2026 23:50", "created": "2026-10-11T23:50:37.0008319+03:00", "panel": true, "ip": "127.0.0.1"},
-  {"key": "TF4T56A", "type": "PANEL", "expiresEpoch": 1823288621, "expiresText": "12.10.2027 00:03", "created": "2026-10-12T00:03:41.7327637+03:00", "panel": true, "ip": "127.0.0.1", "custom": true},
-  {"key": "D3FV-KLLR-YHF3-DYRD", "type": "PANEL", "expiresEpoch": 1794344652, "expiresText": "11.11.2026 00:04", "created": "2026-10-12T00:04:12.8667100+03:00", "panel": true, "ip": "1.1.1.1"},
+  {"key": "TF4T56A", "type": "PANEL", "expiresEpoch": 1823288621, "expiresText": "12.10.2027 00:03", "created": "2026-10-12T00:03:41.7327637+03:00", "panel": true, "custom": true},
   {"key": "HAFW-DYMC-UART-C4F3", "type": "PANEL", "expiresEpoch": 1794343968, "expiresText": "10.11.2026 23:52", "created": "2026-10-11T23:52:48.9343956+03:00", "panel": true, "ip": "1.1.1.1"},
-  {"key": "8ZBS-QAS7-HWNJ-TVXY", "type": "PANEL", "expiresEpoch": 1794343968, "expiresText": "10.11.2026 23:52", "created": "2026-10-11T23:52:48.9792198+03:00", "panel": true, "ip": "1.1.1.1"}
+  {"key": "8ZBS-QAS7-HWNJ-TVXY", "type": "PANEL", "expiresEpoch": 1794343968, "expiresText": "10.11.2026 23:52", "created": "2026-10-11T23:52:48.9792198+03:00", "panel": true, "ip": "1.1.1.1"},
+  {"key": "D3FV-KLLR-YHF3-DYRD", "type": "PANEL", "expiresEpoch": 1794344652, "expiresText": "11.11.2026 00:04", "created": "2026-10-12T00:04:12.8667100+03:00", "panel": true, "ip": "1.1.1.1"}
 ]
