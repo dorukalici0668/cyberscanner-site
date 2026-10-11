@@ -43,7 +43,6 @@ ol{text-align:left;color:#c4b8db;font-size:13px;line-height:1.9;padding-left:20p
 var TUNNEL=null, TOKEN=null;
 function msg(t,cls){var m=document.getElementById('msg');m.textContent=t;m.className='msg '+cls;}
 function loadLink(){
-  msg('Sunucu baglantisi aliniyor...','info');
   fetch('link.json?ts='+Date.now()).then(function(r){
     if(!r.ok) throw new Error('link.json yok');
     return r.json();
@@ -55,11 +54,23 @@ function loadLink(){
     msg('Yetkilinin sunucusu su an acik degil. Yetkili programi baslattiktan sonra bu sayfayi yenileyin (F5).','err');
   });
 }
+function init(){
+  // Direkt link #t=<tunnel>&k=<token> tasiyorsa link.json beklemeden baglan
+  if(location.hash && location.hash.indexOf('#t=')===0){
+    var h=decodeURIComponent(location.hash.substring(3));
+    var parts=h.split('&k=');
+    TUNNEL=parts[0].replace(/\/+$/,'');
+    if(parts.length>1){TOKEN=parts[1];}
+    msg('Hazir! Keyinizi girin.','ok');
+    return;
+  }
+  loadLink();
+}
 function doCheck(){
   var k=document.getElementById('keyinput').value.trim();
   var b=document.getElementById('btn');
   if(!k){msg('Lutfen yetkilinin size verdigi keyi girin.','err');return;}
-  if(!TUNNEL){loadLink();return;}
+  if(!TUNNEL){init();return;}
   b.disabled=true;msg('Key dogrulaniyor...','info');
   fetch(TUNNEL+'/api/download-check?key='+encodeURIComponent(k)).then(function(r){return r.json().then(function(d){return {s:r.status,d:d};});}).then(function(o){
     if(o.s===200&&o.d.ok){
@@ -76,6 +87,6 @@ function doCheck(){
   });
 }
 document.getElementById('keyinput').addEventListener('keypress',function(e){if(e.key==='Enter')doCheck();});
-loadLink();
+init();
 </script>
 </body></html>
