@@ -85,6 +85,20 @@ select{width:100%;padding:12px;background:#17102b;border:1px solid #332154;borde
 </div>
 <div id="generr" class="err"></div>
 <button class="copy" id="btn-ayarlar" onclick="openAyarlar()" style="margin-top:12px;width:100%;">&#9881; AYARLAR - Key Surelerini Belirle</button>
+<div class="subbox" id="subbox" style="margin-top:14px;padding:12px;background:#17102b;border:1px solid #332154;border-radius:10px;text-align:left;">
+<div style="font-size:12px;font-weight:700;color:#c084fc;margin-bottom:8px;">AYLIK ADMIN ABONELIGI SAT</div>
+<div class="pinrow">
+<input type="number" id="subdays" value="30" min="1" max="3650" title="Gun" style="max-width:90px;">
+<button onclick="genSub()">ABONELIK OLUSTUR</button>
+</div>
+<div class="key" id="subkey" style="display:none;"></div>
+<div class="meta" id="submeta" style="display:none;"></div>
+<div class="pinrow" style="margin-top:8px;">
+<input type="text" id="revokekey" placeholder="IPTAL: ADM-...." autocomplete="off">
+<button onclick="revokeSub()">IPTAL ET</button>
+</div>
+<div id="suberr" class="err"></div>
+</div>
 <div class="stats" id="stats"></div>
 </div>
 
@@ -97,6 +111,35 @@ var GHTOKEN=null, KEYS_REPO=null, SITE_REPO=null, SALT=null;
 function openAyarlar(){
   if(MODE==='server'&&TUNNEL){window.open('ayarlar.html#t='+encodeURIComponent(TUNNEL)+'&auth='+encodeURIComponent(AUTHTOKEN),'_blank');}
   else{window.open('ayarlar.html#gh=1','_blank');}
+}
+
+async function genSub(){
+  var days=parseInt(document.getElementById('subdays').value)||30;
+  var e=document.getElementById('suberr');e.style.display='none';
+  try{
+    var url;
+    if(MODE==='server'&&TUNNEL){url=TUNNEL+'/api/admin/subs/create?plan='+days+'&auth='+encodeURIComponent(AUTHTOKEN);}
+    else{err('suberr','Abonelik uretimi icin sunucu modu gerekli (dagitim sunucusunu acin).');return;}
+    var r=await fetch(url);var d=await r.json();
+    if(r.status===200&&d.ok){
+      var k=document.getElementById('subkey');k.textContent=d.key;k.style.display='block';
+      var m=document.getElementById('submeta');m.textContent=d.planDays+' gunluk plan | Bitis: '+d.expires+' (musteriye iletin)';m.style.display='block';
+      copyText(d.key);
+    } else {err('suberr',(d&&d.error)?d.error:'Olusturulamadi');}
+  }catch(ex){err('suberr','Sunucuya ulasilamadi');}
+}
+
+async function revokeSub(){
+  var k=document.getElementById('revokekey').value.trim();
+  var e=document.getElementById('suberr');e.style.display='none';
+  if(!k){err('suberr','Iptal edilecek keyi girin');return;}
+  try{
+    if(!(MODE==='server'&&TUNNEL)){err('suberr','Iptal icin sunucu modu gerekli');return;}
+    var r=await fetch(TUNNEL+'/api/admin/subs/revoke?key='+encodeURIComponent(k)+'&auth='+encodeURIComponent(AUTHTOKEN));
+    var d=await r.json();
+    if(r.status===200&&d.ok){var m=document.getElementById('submeta');m.textContent='Key IPTAL edildi: '+k;m.style.display='block';}
+    else{err('suberr',(d&&d.error)?d.error:'Bulunamadi');}
+  }catch(ex){err('suberr','Sunucuya ulasilamadi');}
 }
 
 function msg(t,cls){var s=document.getElementById('status');s.style.display='block';s.className='msg '+cls;s.textContent=t;}
