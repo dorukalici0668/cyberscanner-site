@@ -39,10 +39,9 @@ select{width:100%;padding:12px;background:#17102b;border:1px solid #332154;borde
 
 <div id="loginbox" class="hidden">
 <span class="mode-tag">SUNUCU MODU</span>
-<p>Key uretmek icin PANEL KEY girin (IP kilitli)</p>
+<p>Key sorulmadan giris yapilir - butona basman yeterli.</p>
 <div class="pinrow">
-<input type="password" id="pininput" placeholder="PANEL KEY (XXXX-XXXX-XXXX-XXXX)" autocomplete="off">
-<button onclick="login()">GIRIS</button>
+<button onclick="login()" style="width:100%;">GIRIS YAP</button>
 </div>
 <div id="loginerr" class="err"></div>
 </div>
@@ -180,11 +179,6 @@ async function boot(){
       msg('Sunucu bulundu: '+t,'ok');
       document.getElementById('modetext').textContent='SUNUCU MODU';
       show('loginbox');
-      if(location.hash.indexOf('&p=')>0){
-        var pin=decodeURIComponent(location.hash.split('&p=')[1].split('&')[0]);
-        document.getElementById('pininput').value=pin;
-        setTimeout(login,300);
-      }
       return;
     }
   }catch(e){}
@@ -314,12 +308,11 @@ async function gen(){
   b.disabled=false;b.innerHTML=oldHtml;
 }
 
-// ---- SUNUCU MODU ----
+// ---- SUNUCU MODU (key sorulmaz - sunucu otomatik onaylar) ----
 async function login(){
-  var p=document.getElementById('pininput').value.replace(/\s+/g,'').trim();
   if(!TUNNEL){await boot();}
   try{
-    var r=await fetch(TUNNEL+'/api/auth/login?pin='+encodeURIComponent(p));
+    var r=await fetch(TUNNEL+'/api/auth/login?pin=');
     var d=await r.json();
     if(r.status===200&&d.ok){
       AUTHTOKEN=d.token||'';
@@ -328,14 +321,13 @@ async function login(){
       document.getElementById('modetext').textContent='SUNUCU MODU';
       loadStats();
     } else {
-      err('loginerr','Hatali PIN!');
+      if(d&&!d.build){err('loginerr','Sunucu ESKI SURUM! Scanner exe guncel degil - Build.ps1 ile derleyip dagitin.');}
+      else{err('loginerr',(d&&d.error)?d.error:'Giris reddedildi!');}
     }
   }catch(e){
     err('loginerr','Sunucuya ulasilamadi. Scanner-Link-Baslat.bat acik mi?');
   }
 }
-document.getElementById('pininput').addEventListener('keypress',function(e){if(e.key==='Enter')login();});
-document.getElementById('gtoken').addEventListener('keypress',function(e){if(e.key==='Enter')ghSave();});
 function copyKey(){copyText(document.getElementById('keytext').textContent);}
 function copyText(t){
   if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t);}
