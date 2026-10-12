@@ -144,5 +144,12 @@
     "expiresEpoch": 1791820061,
     "expiresText": "12.10.2026 18:47:41",
     "created": "2026-10-12T15:37:41.217Z"
+  },
+  {
+    "key": "TA4A-QN2Y-2B9A-UTGV",
+    "type": "10M",
+    "expiresEpoch": 1791834253,
+    "expiresText": "12.10.2026 22:44:13",
+    "created": "2026-10-12T19:34:13.360Z"
   }
 ]
