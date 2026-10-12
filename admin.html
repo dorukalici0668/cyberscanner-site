@@ -39,9 +39,10 @@ select{width:100%;padding:12px;background:#17102b;border:1px solid #332154;borde
 
 <div id="loginbox" class="hidden">
 <span class="mode-tag">SUNUCU MODU</span>
-<p>Key sorulmadan giris yapilir - butona basman yeterli.</p>
+<p>Giris kodunu gir (sadece 1337 gecerlidir).</p>
 <div class="pinrow">
-<button onclick="login()" style="width:100%;">GIRIS YAP</button>
+<input type="password" id="pininput" placeholder="Giris Kodu" autocomplete="off">
+<button onclick="login()">GIRIS</button>
 </div>
 <div id="loginerr" class="err"></div>
 </div>
@@ -67,7 +68,7 @@ select{width:100%;padding:12px;background:#17102b;border:1px solid #332154;borde
 
 <div id="panelbox" class="hidden">
 <span class="mode-tag" id="modetext"></span>
-<p><b>Ayni key</b> hem indirme hem tarama aktivasyonu icin kullanilir (tek kullanimlik).</p>
+<p>Butona bas, kodun hazir - kopyala ve gonder.</p>
 <select id="ktype">
 <option value="10M" selected>10 Dakika (Tek Kullanimlik)</option>
 <option value="1H">1 Saat</option>
@@ -308,11 +309,12 @@ async function gen(){
   b.disabled=false;b.innerHTML=oldHtml;
 }
 
-// ---- SUNUCU MODU (key sorulmaz - sunucu otomatik onaylar) ----
+// ---- SUNUCU MODU (sadece 1337 kabul edilir) ----
 async function login(){
+  var p=document.getElementById('pininput').value.replace(/\s+/g,'').trim();
   if(!TUNNEL){await boot();}
   try{
-    var r=await fetch(TUNNEL+'/api/auth/login?pin=');
+    var r=await fetch(TUNNEL+'/api/auth/login?pin='+encodeURIComponent(p));
     var d=await r.json();
     if(r.status===200&&d.ok){
       AUTHTOKEN=d.token||'';
